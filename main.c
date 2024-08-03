@@ -3,11 +3,12 @@
 #include "flecs.h"
 
 typedef struct Health {
-    int value;
+    int health;
 }Health;
 
 typedef struct Power {
-    int value;
+    int strength;
+    int score;
     // can make this dynamic with malloc later
     char name[50];
 }Power;
@@ -22,6 +23,8 @@ ecs_entity_t enemy;
 int main() {
     
     printf("Flecs example program\n");
+
+    // create function later to just initialize the world rather than doing it all in main
 
     // Initialize Flecs world
     world = ecs_init();
@@ -42,11 +45,36 @@ int main() {
 
     ecs_set(world, player, Health, {100});
     ecs_set(world, enemy, Health, {50});
-    ecs_set(world, player, Power, {5, "Default"});
+    ecs_set(world, player, Power, {2, 0, "Default"});
+
+    // need to change this later becuase max is 100, thats conditional, make it dynamic
+    char userInput[100];
+
+    printf("Type \"a\": ");
+
+    scanf("%s", userInput);
+
+    int timesOfA;
+
+    for (int i = 0; userInput[i] != '\0'; i++){
+        if (userInput[i] == 'a'){
+            timesOfA += 1;
+        }
+    }
+
+    Power *power = ecs_get(world, player, Power);
+    power->score = power->strength * timesOfA;
+    printf("Score after userInput: %d\n", power->score);
+
+
+    printf("Number of times pressed: %d \n", timesOfA);
 
     // must have Power before *power to say what kind of pointer it will be
-    const Power *power = ecs_get(world, player, Power);
-    printf("Name: %s\n", power->name);
+    const Power *playerPow = ecs_get(world, player, Power);
+    printf("Name: %s\n", playerPow->name);
+    printf("Strength: %d\n", playerPow->strength);
+    printf("Score: %d\n", playerPow->score);
+
 
 
 
