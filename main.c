@@ -1,17 +1,30 @@
 // main.c
 #include <stdio.h>
 #include "flecs.h"
+#include<conio.h>
 
 typedef struct Health {
     int health;
 }Health;
 
+typedef struct Score {
+    int val;
+}Score;
+
 typedef struct Power {
     int strength;
-    int score;
     // can make this dynamic with malloc later
     char name[50];
 }Power;
+
+// *it is pretty much a linkedlist of entities that have the identified components
+// You do not directly call this function because it is within a System.
+// A system finds the "it" associated with the class and executes the function
+void UpdateScore(ecs_iter_t *it) {
+    Score *s = ecs_field(it, Score, 1);
+    s->val += 1;
+}
+// ^^^^ later might need to make it so it always does not add one to the score, only if true
 
 
 
@@ -35,36 +48,46 @@ int main() {
 
 
     // declaring Component
+    ECS_COMPONENT(world, Score);
     ECS_COMPONENT(world, Health);
     ECS_COMPONENT(world, Power);
 
+    ECS_SYSTEM(world, UpdateScore, EcsOnUpdate, Score, Health, Power);
+
     // Assigning values
+    ecs_add(world, player, Score);
     ecs_add(world, player, Health);
     ecs_add(world, player, Power);
     ecs_add(world, enemy, Health);
 
+
+    ecs_set(world, player, Score, {0});
     ecs_set(world, player, Health, {100});
+    ecs_set(world, player, Power, {2, "Default"});
+
     ecs_set(world, enemy, Health, {50});
-    ecs_set(world, player, Power, {2, 0, "Default"});
+
 
     // need to change this later becuase max is 100, thats conditional, make it dynamic
-    char userInput[100];
+    char userInput;
+    int timesOfA = 0;
 
     printf("Type \"a\": ");
-
-    scanf("%s", userInput);
-
-    int timesOfA;
-
-    for (int i = 0; userInput[i] != '\0'; i++){
-        if (userInput[i] == 'a'){
-            timesOfA += 1;
-        }
+    userInput = getche();
+    // scanf("%s", userInput);
+    while (userInput == 'a'){
+        ecs_progress(world, 0);
+        printf("\nType \"a\": ");
+        userInput = getche();
     }
 
     Power *power = ecs_get(world, player, Power);
-    power->score = power->strength * timesOfA;
-    printf("Score after userInput: %d\n", power->score);
+    Score *score = ecs_get(world, player, Score);
+    printf("\nScore after userInput: %d", score->val);
+    timesOfA = score->val;
+    score->val = power->strength * score->val;
+
+    printf("\nScore after userInput and multiply: %d\n", score->val);
 
 
     printf("Number of times pressed: %d \n", timesOfA);
@@ -73,7 +96,7 @@ int main() {
     const Power *playerPow = ecs_get(world, player, Power);
     printf("Name: %s\n", playerPow->name);
     printf("Strength: %d\n", playerPow->strength);
-    printf("Score: %d\n", playerPow->score);
+    printf("Score: %d\n", score->val);
 
 
 
@@ -86,8 +109,6 @@ int main() {
     // bool is_alive = ecs_is_alive(world, player);
     // printf("Is alive: %d\n", is_alive);
 
-
-    
     // Clean up
     ecs_fini(world);
     return 0;
@@ -109,3 +130,8 @@ gcc -o my_program main.o flecs.o -lws2_32
 /*
 gcc -o my_program main.c flecs.c -std=gnu99 -lws2_32
 */
+
+
+// think about using a system to change values
+// also an archetype to make it easier for scaling later
+// figure out a way to keep like a scoreboard at the top of the page in your terminal
