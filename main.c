@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include "flecs.h"
 #include<conio.h>
-
+#include <ncurses/ncurses.h>
 
 typedef struct Health {
     int health;
@@ -39,7 +39,15 @@ ecs_entity_t enemy;
 
 
 int main() {
-    
+    // // init screen and sets up screen
+    // initscr();
+    // // print to screen
+    // printw("Hello World");
+    // // refreshes the screen
+    // refresh();
+    // // pause the screen output
+    // getch();
+
     printf("Flecs example program\n");
 
     // create function later to just initialize the world rather than doing it all in main
@@ -136,6 +144,8 @@ gcc -o my_program main.o flecs.o -lws2_32
 /*
 gcc -o my_program main.c flecs.c -std=gnu99 -lws2_32
 */
+
+// add -lncurses -DNCURSES_STATIC after .c and .o config for ncurses
 
 
 // think about using a system to change values
