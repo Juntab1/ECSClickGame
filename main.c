@@ -3,6 +3,7 @@
 #include "flecs.h"
 #include<conio.h>
 
+
 typedef struct Health {
     int health;
 }Health;
@@ -21,8 +22,12 @@ typedef struct Power {
 // You do not directly call this function because it is within a System.
 // A system finds the "it" associated with the class and executes the function
 void UpdateScore(ecs_iter_t *it) {
-    Score *s = ecs_field(it, Score, 1);
-    s->val += 1;
+    // remember that this might be a list of entities with score
+    Score *s = ecs_field(it, Score, 0);
+    
+    for (int i = 0; i < it->count; i++){
+        s[i].val += 1;
+    }
 }
 // ^^^^ later might need to make it so it always does not add one to the score, only if true
 
@@ -52,7 +57,6 @@ int main() {
     ECS_COMPONENT(world, Health);
     ECS_COMPONENT(world, Power);
 
-    ECS_SYSTEM(world, UpdateScore, EcsOnUpdate, Score, Health, Power);
 
     // Assigning values
     ecs_add(world, player, Score);
@@ -66,6 +70,8 @@ int main() {
     ecs_set(world, player, Power, {2, "Default"});
 
     ecs_set(world, enemy, Health, {50});
+
+    ECS_SYSTEM(world, UpdateScore, EcsOnUpdate, Score, Health, Power);
 
 
     // need to change this later becuase max is 100, thats conditional, make it dynamic
