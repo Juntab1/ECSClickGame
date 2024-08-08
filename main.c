@@ -1,7 +1,7 @@
 // main.c
 #include <stdio.h>
 #include "flecs.h"
-#include<conio.h>
+#include <conio.h>
 #include <ncurses/ncurses.h>
 
 typedef struct Health {
@@ -31,12 +31,22 @@ void UpdateScore(ecs_iter_t *it) {
 }
 // ^^^^ later might need to make it so it always does not add one to the score, only if true
 
-
-
 ecs_world_t *world;
 ecs_entity_t player;
 ecs_entity_t enemy;
 
+
+// I can't figure out how to use ecs_get cause for example "power" and "Score" are undefined
+void menuScreeen(int playerScore, int playerPow, int enemyHealth){
+    printf("Player:\n"
+            "     score:%d\n" 
+            "     power:%d\n"
+            "Enemy:\n"
+            "     health:%d\n"
+        , playerScore, playerPow, enemyHealth);
+
+    return 0;
+}
 
 int main() {
     // // init screen and sets up screen
@@ -59,7 +69,6 @@ int main() {
     player = ecs_entity(world, { .name = "User1" });
     enemy = ecs_entity(world, { .name = "enemy" });
 
-
     // declaring Component
     ECS_COMPONENT(world, Score);
     ECS_COMPONENT(world, Health);
@@ -70,6 +79,7 @@ int main() {
     ecs_add(world, player, Score);
     ecs_add(world, player, Health);
     ecs_add(world, player, Power);
+
     ecs_add(world, enemy, Health);
 
 
@@ -86,6 +96,12 @@ int main() {
     char userInput;
     int timesOfA = 0;
 
+    // try to figure out how to make these calls dynamic so you don't have to call ecs_get each time
+    Power *power = ecs_get(world, player, Power);
+    Score *score = ecs_get(world, player, Score);
+    Health *health = ecs_get(world, enemy, Health);
+    menuScreeen(score->val, power->strength, health->health);
+
     printf("Type \"a\": ");
     userInput = getche();
     // scanf("%s", userInput);
@@ -95,8 +111,8 @@ int main() {
         userInput = getche();
     }
 
-    Power *power = ecs_get(world, player, Power);
-    Score *score = ecs_get(world, player, Score);
+    // Power *power = ecs_get(world, player, Power);
+    // Score *score = ecs_get(world, player, Score);
     printf("\nScore after userInput: %d", score->val);
     timesOfA = score->val;
     score->val = power->strength * score->val;
@@ -114,9 +130,6 @@ int main() {
 
 
 
-
-
-
     // printf("Name: %s\n", ecs_get_name(world, player));
 
     // // state which world and what the entity is
@@ -127,6 +140,8 @@ int main() {
     ecs_fini(world);
     return 0;
 }
+
+void menuScreen(ecs_world_t *world, ecs_entity_t player, ecs_entity_t enemy);
 
 
 // Compiling, turns them into object files but not linking them into executable (good when you only change something in one file)
