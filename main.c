@@ -16,7 +16,7 @@ typedef struct Score {
 typedef struct Power {
     int strength;
     // can make this dynamic with malloc later
-    char name[50];
+    char* name;
 }Power;
 
 // this is a way to keep track of how many to take away each click from the player
@@ -127,12 +127,13 @@ int main() {
     char userInput;
     int timesOfA = 0;
 
-    // dynamic pointer and must have * for it to be a pointer
-    Power *power = ecs_get(world, player, Power);
-    Click *click = ecs_get(world, player, Click);
-    Score *score = ecs_get(world, player, Score);
-    Health *health = ecs_get(world, enemy, Health);
-    Weakness *weakness = ecs_get(world, enemy, Weakness);
+    // dynamic pointer and must have * for it to be a pointer, having const does not change the pointer itself,
+    // don't need the pointer to ever change 
+    const Power *power = ecs_get(world, player, Power);
+    const Click *click = ecs_get(world, player, Click);
+    const Score *score = ecs_get(world, player, Score);
+    const Health *health = ecs_get(world, enemy, Health);
+    const Weakness *weakness = ecs_get(world, enemy, Weakness);
 
     menuScreen(click->val, score->val, power->strength, power->name, health->val, weakness->val);
 
