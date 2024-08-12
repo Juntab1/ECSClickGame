@@ -17,6 +17,10 @@ typedef struct Power {
     int strength;
     // can make this dynamic with malloc later
     char* name;
+    // c is statically typed so it is just better to do two arrays and a int index
+    char* names[2];
+    int* powers[2];
+    int index;
 }Power;
 
 // this is a way to keep track of how many to take away each click from the player
@@ -113,7 +117,10 @@ int main() {
 
     ecs_set(world, player, Score, {0});
     ecs_set(world, player, Health, {100});
-    ecs_set(world, player, Power, {2, "Default"});
+    // power furmula is 2^index + 2
+    char* names[] = {"starter", "intermediate"};
+    int strengths[] = {2, 3};
+    ecs_set(world, player, Power, {2, "Default", names, strengths, 0});
     ecs_set(world, player, Click, {0});
 
     ecs_set(world, enemy, Health, {50});
