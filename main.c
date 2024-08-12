@@ -5,7 +5,7 @@
 #include <ncurses/ncurses.h>
 
 typedef struct Health {
-    int health;
+    int val;
 }Health;
 
 // score is created by click multiplied by power
@@ -19,6 +19,11 @@ typedef struct Power {
     char name[50];
 }Power;
 
+// this is a way to keep track of how many to take away each click from the player
+typedef struct Weakness {
+    int val;
+}Weakness;
+
 // keep count of singular count 
 typedef struct Click {
     int val;
@@ -27,8 +32,8 @@ typedef struct Click {
 // *it is pretty much a linkedlist of entities that have the identified components
 // You do not directly call this function because it is within a System.
 // A system finds the "it" associated with the class and executes the function
-void UpdateScore(ecs_iter_t *it) {
-    // remember that this might be a list of entities with score
+void UpdatePlayerByClick(ecs_iter_t *it) {
+    // remember that "it" is a list of entities with the following identified components
     Score *s = ecs_field(it, Score, 0);
     Power *p = ecs_field(it, Power, 2);
     Click *c = ecs_field(it, Click, 3);
@@ -40,20 +45,32 @@ void UpdateScore(ecs_iter_t *it) {
 }
 // ^^^^ later might need to make it so it always does not add one to the score, only if true
 
+void UpdateEnemyHealth(ecs_iter_t *it) {
+    Health *h = ecs_field(it, Health, 0);
+    Weakness *w = ecs_field(it, Weakness, 1);
+
+    for (int i = 0; i < it->count; i++){
+        h[i].val -= w->val;
+    }
+
+}
+
 ecs_world_t *world;
 ecs_entity_t player;
 ecs_entity_t enemy;
 
 
 // I can't figure out how to use ecs_get cause for example "power" and "Score" are undefined
-void menuScreen(int playerClick, int playerScore, int playerPow, int enemyHealth){
+void menuScreen(int playerClick, int playerScore, int playerPow, char* name, int enemyHealth, int weakness){
     printf("Player:\n"
             "     click:%d\n" 
             "     score:%d\n" 
             "     power:%d\n"
+            "     name:%s\n"
             "Enemy:\n"
             "     health:%d\n"
-        , playerClick, playerScore, playerPow, enemyHealth);
+            "     weakness:%d\n"
+        , playerClick, playerScore, playerPow, name, enemyHealth, weakness);
 }
 
 int main() {
@@ -81,7 +98,8 @@ int main() {
     ECS_COMPONENT(world, Score);
     ECS_COMPONENT(world, Health);
     ECS_COMPONENT(world, Power);
-    ECS_COMPONENT(world, Click);
+    ECS_COMPONENT(world, Click);  
+    ECS_COMPONENT(world, Weakness);  
 
 
     // Assigning values
@@ -91,6 +109,7 @@ int main() {
     ecs_add(world, player, Click);
 
     ecs_add(world, enemy, Health);
+    ecs_add(world, enemy, Weakness);
 
     ecs_set(world, player, Score, {0});
     ecs_set(world, player, Health, {100});
@@ -98,20 +117,24 @@ int main() {
     ecs_set(world, player, Click, {0});
 
     ecs_set(world, enemy, Health, {50});
+    ecs_set(world, enemy, Weakness, {2});
 
-    ECS_SYSTEM(world, UpdateScore, EcsOnUpdate, Score, Health, Power, Click);
+    ECS_SYSTEM(world, UpdatePlayerByClick, EcsOnUpdate, Score, Health, Power, Click);
+    ECS_SYSTEM(world, UpdateEnemyHealth, EcsOnUpdate, Health, Weakness);
 
 
     // need to change this later becuase max is 100, thats conditional, make it dynamic
     char userInput;
     int timesOfA = 0;
 
-    // try to figure out how to make these calls dynamic so you don't have to call ecs_get each time
+    // dynamic pointer and must have * for it to be a pointer
     Power *power = ecs_get(world, player, Power);
     Click *click = ecs_get(world, player, Click);
     Score *score = ecs_get(world, player, Score);
     Health *health = ecs_get(world, enemy, Health);
-    menuScreen(click->val, score->val, power->strength, health->health);
+    Weakness *weakness = ecs_get(world, enemy, Weakness);
+
+    menuScreen(click->val, score->val, power->strength, power->name, health->val, weakness->val);
 
     printf("Type \"a\": ");
     userInput = getche();
@@ -123,27 +146,7 @@ int main() {
     }
     printf("\n");
 
-    menuScreen(click->val, score->val, power->strength, health->health);
-    // Power *power = ecs_get(world, player, Power);
-    // Score *score = ecs_get(world, player, Score);
-    printf("\nScore after userInput: %d", score->val);
-    timesOfA = score->val;
-    score->val = power->strength * score->val;
-
-    printf("\nScore after userInput and multiply: %d\n", score->val);
-
-
-    printf("Number of times pressed: %d \n", timesOfA);
-
-    // must have Power before *power to say what kind of pointer it will be
-    const Power *playerPow = ecs_get(world, player, Power);
-    printf("Name: %s\n", playerPow->name);
-    printf("Strength: %d\n", playerPow->strength);
-    printf("Score: %d\n", score->val);
-
-
-
-    // printf("Name: %s\n", ecs_get_name(world, player));
+    menuScreen(click->val, score->val, power->strength, power->name, health->val, weakness->val);
 
     // // state which world and what the entity is
     // bool is_alive = ecs_is_alive(world, player);
@@ -154,7 +157,7 @@ int main() {
     return 0;
 }
 
-void menuScreen(int playerClick, int playerScore, int playerPow, int enemyHealth);
+void menuScreen(int playerClick, int playerScore, int playerPow, char* name, int enemyHealth, int weakness);
 
 
 // Compiling, turns them into object files but not linking them into executable (good when you only change something in one file)
