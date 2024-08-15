@@ -84,6 +84,47 @@ void menuScreen(int playerClick, int playerScore, int playerPow, char* name, cha
         , playerClick, playerScore, playerPow, name, levelName, levelPower, enemyHealth, weakness);
 }
 
+void run(){
+    // dynamic pointer and must have * for it to be a pointer, having const does not change the pointer itself,
+    // don't need the pointer to ever change 
+    char userInput;
+    const Power *power = ecs_get(world, player, Power);
+    const Click *click = ecs_get(world, player, Click);
+    const Score *score = ecs_get(world, player, Score);
+    const Health *health = ecs_get(world, enemy, Health);
+    const Weakness *weakness = ecs_get(world, enemy, Weakness);
+    printf("%s\n", power->names[power->index]);
+    printf("%d\n", power->powers[power->index]);
+    menuScreen(click->val, score->val, power->strength, power->name, power->names[power->index], power->powers[power->index], health->val, weakness->val);
+    printf("\n");
+
+    bool runGame = true;
+
+    // delete to move into main function
+    printf("Type \"a\": ");
+    userInput = getche();
+    // scanf("%s", userInput);
+    // while not quit loop and do main update
+
+    while (runGame){
+        printf("\nType \"a\": ");
+        userInput = getche();
+        if (userInput == 'w'){
+            menuScreen(click->val, score->val, power->strength, power->name, power->names[power->index], power->powers[power->index], health->val, weakness->val);
+        }
+        else if (userInput == 'a'){
+            ecs_progress(world, 0);
+        }
+        else{
+            runGame = false;
+        }
+    }
+    printf("\n");
+
+    menuScreen(click->val, score->val, power->strength, power->name, power->names[power->index], power->powers[power->index], health->val, weakness->val);
+
+}
+
 int main() {
     // // init screen and sets up screen
     // initscr();
@@ -110,7 +151,15 @@ int main() {
     ECS_COMPONENT(world, Health);
     ECS_COMPONENT(world, Power);
     ECS_COMPONENT(world, Click);  
-    ECS_COMPONENT(world, Weakness);  
+    ECS_COMPONENT(world, Weakness); 
+
+
+    extern ECS_COMPONENT_DECLARE(Power);
+    extern ECS_COMPONENT_DECLARE(Score);
+    extern ECS_COMPONENT_DECLARE(Click);
+    extern ECS_COMPONENT_DECLARE(Health);
+    extern ECS_COMPONENT_DECLARE(Weakness);
+
 
 
     // Assigning values
@@ -151,28 +200,8 @@ int main() {
     char userInput;
     int timesOfA = 0;
 
-    // dynamic pointer and must have * for it to be a pointer, having const does not change the pointer itself,
-    // don't need the pointer to ever change 
-    const Power *power = ecs_get(world, player, Power);
-    const Click *click = ecs_get(world, player, Click);
-    const Score *score = ecs_get(world, player, Score);
-    const Health *health = ecs_get(world, enemy, Health);
-    const Weakness *weakness = ecs_get(world, enemy, Weakness);
-    printf("%s\n", power->names[power->index]);
-    printf("%d\n", power->powers[power->index]);
-    menuScreen(click->val, score->val, power->strength, power->name, power->names[power->index], power->powers[power->index], health->val, weakness->val);
-
-    printf("Type \"a\": ");
-    userInput = getche();
-    // scanf("%s", userInput);
-    while (userInput == 'a'){
-        ecs_progress(world, 0);
-        printf("\nType \"a\": ");
-        userInput = getche();
-    }
-    printf("\n");
-
-    menuScreen(click->val, score->val, power->strength, power->name, power->names[power->index], power->powers[power->index], health->val, weakness->val);
+    // put main run function
+    run();
 
     // // state which world and what the entity is
     // bool is_alive = ecs_is_alive(world, player);
@@ -184,6 +213,8 @@ int main() {
 }
 
 void menuScreen(int playerClick, int playerScore, int playerPow, char* name, char* levelName, int levelPower, int enemyHealth, int weakness);
+
+void run();
 
 
 // Compiling, turns them into object files but not linking them into executable (good when you only change something in one file)
