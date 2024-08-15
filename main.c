@@ -17,10 +17,10 @@ typedef struct Power {
     int strength;
     // can make this dynamic with malloc later
     char* name;
+    int index;
     // c is statically typed so it is just better to do two arrays and a int index
     char* names[2];
-    int* powers[2];
-    int index;
+    int powers[2];
 }Power;
 
 // this is a way to keep track of how many to take away each click from the player
@@ -45,6 +45,11 @@ void UpdatePlayerByClick(ecs_iter_t *it) {
     for (int i = 0; i < it->count; i++){
         c[i].val += 1;
         s[i].val += p[i].strength;
+        if (c[i].val == 5){
+            p->index += 1;
+            p->name = p->names[p->index];
+            p->strength = p->powers[p->index];
+        }
     }
 }
 // ^^^^ later might need to make it so it always does not add one to the score, only if true
@@ -65,16 +70,18 @@ ecs_entity_t enemy;
 
 
 // I can't figure out how to use ecs_get cause for example "power" and "Score" are undefined
-void menuScreen(int playerClick, int playerScore, int playerPow, char* name, int enemyHealth, int weakness){
+void menuScreen(int playerClick, int playerScore, int playerPow, char* name, char* levelName, int levelPower, int enemyHealth, int weakness){
     printf("Player:\n"
             "     click:%d\n" 
             "     score:%d\n" 
             "     power:%d\n"
             "     name:%s\n"
+            "     levelName:%s\n"
+            "     levelPower:%d\n"
             "Enemy:\n"
             "     health:%d\n"
             "     weakness:%d\n"
-        , playerClick, playerScore, playerPow, name, enemyHealth, weakness);
+        , playerClick, playerScore, playerPow, name, levelName, levelPower, enemyHealth, weakness);
 }
 
 int main() {
@@ -118,9 +125,19 @@ int main() {
     ecs_set(world, player, Score, {0});
     ecs_set(world, player, Health, {100});
     // power furmula is 2^index + 2
-    char* names[] = {"starter", "intermediate"};
-    int strengths[] = {2, 3};
-    ecs_set(world, player, Power, {2, "Default", names, strengths, 0});
+    Power p = {
+        p.strength = 2,
+        p.name = "Default",
+        p.index = 0,
+    };
+    ecs_set(world, player, Power, {
+        .index = 0, 
+        .names = {"starter", "intermediate"}, 
+        .powers = {2, 3},
+        .name = "starter", 
+        .strength = 2, 
+    });
+
     ecs_set(world, player, Click, {0});
 
     ecs_set(world, enemy, Health, {50});
@@ -141,8 +158,9 @@ int main() {
     const Score *score = ecs_get(world, player, Score);
     const Health *health = ecs_get(world, enemy, Health);
     const Weakness *weakness = ecs_get(world, enemy, Weakness);
-
-    menuScreen(click->val, score->val, power->strength, power->name, health->val, weakness->val);
+    printf("%s\n", power->names[power->index]);
+    printf("%d\n", power->powers[power->index]);
+    menuScreen(click->val, score->val, power->strength, power->name, power->names[power->index], power->powers[power->index], health->val, weakness->val);
 
     printf("Type \"a\": ");
     userInput = getche();
@@ -154,7 +172,7 @@ int main() {
     }
     printf("\n");
 
-    menuScreen(click->val, score->val, power->strength, power->name, health->val, weakness->val);
+    menuScreen(click->val, score->val, power->strength, power->name, power->names[power->index], power->powers[power->index], health->val, weakness->val);
 
     // // state which world and what the entity is
     // bool is_alive = ecs_is_alive(world, player);
@@ -165,7 +183,7 @@ int main() {
     return 0;
 }
 
-void menuScreen(int playerClick, int playerScore, int playerPow, char* name, int enemyHealth, int weakness);
+void menuScreen(int playerClick, int playerScore, int playerPow, char* name, char* levelName, int levelPower, int enemyHealth, int weakness);
 
 
 // Compiling, turns them into object files but not linking them into executable (good when you only change something in one file)
