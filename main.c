@@ -49,17 +49,55 @@ typedef struct GameState
     ecs_entity_t enemy;
 } GameState;
 
-
+// get the user input for that iteration
 void UpdateInput(ecs_iter_t* it){
-    Click *c = ecs_field(it, Click, 3);
+    ecs_entity_t* gameStates = ecs_field(it, ecs_entity_t, 1);
 
-    
+    for (int i = 0; i < it->count; i++){
+        ecs_entity_t gameState = gameStates[i];
+        ecs_entity_t* player = ecs_field(gameState, ecs_entity_t, 1);
+        ecs_entity_t* enemy = ecs_field(gameState, ecs_entity_t, 2);
+        Click* playerClick = ecs_field(player, Click, 3);
+        Click* enemyClick = ecs_field(enemy, Click, 3);
+        bool runGame = true;
+        char userInput;
+        char desiredChar = 'a';
+        char menuChar = 'w';
+        char quitChar = 'q';
+
+        printf("\nType \"%c\": ", desiredChar);
+        userInput = getche();
+        if (userInput == menuChar){
+            // change this later to the menu or something
+            print("score");
+        }
+        else if (userInput == desiredChar){
+            playerClick->didClick = true;
+            enemyClick->didClick = true;
+        }
+        else{
+            playerClick->didClick = false;
+            enemyClick->didClick = false;
+        }
+    }
 
 }
 
-// clearing click of user 
-void clear(){
+// clearing click of user and enemy
+void ClearIteration(ecs_iter_t* it){
+    ecs_entity_t* gameStates = ecs_field(it, ecs_entity_t, 0);
 
+
+    for (int i = 0; i < it->count; i++){
+        ecs_entity_t gameState = gameStates[i];
+        ecs_entity_t* player = ecs_field(gameState, ecs_entity_t, 1);
+        ecs_entity_t* enemy = ecs_field(gameState, ecs_entity_t, 2);
+        Click* playerClick = ecs_field(player, Click, 3);
+        Click* enemyClick = ecs_field(enemy, Click, 3);
+
+        playerClick->didClick = false;
+        enemyClick->didClick = false;
+    }
 }
 
 // *it is pretty much a linkedlist of entities that have the identified components
@@ -72,12 +110,14 @@ void UpdatePlayerByClick(ecs_iter_t *it) {
     Click *c = ecs_field(it, Click, 3);
     
     for (int i = 0; i < it->count; i++){
-        c[i].val += 1;
-        s[i].val += p[i].strength;
-        if (c[i].val == 5){
-            p->index += 1;
-            p->name = p->names[p->index];
-            p->strength = p->powers[p->index];
+        if (c[i].didClick == true){
+            c[i].val += 1;
+            s[i].val += p[i].strength;
+            if (c[i].val == 5){
+                p->index += 1;
+                p->name = p->names[p->index];
+                p->strength = p->powers[p->index];
+            }
         }
     }
 }
@@ -86,17 +126,15 @@ void UpdatePlayerByClick(ecs_iter_t *it) {
 void UpdateEnemyHealth(ecs_iter_t *it) {
     Health *h = ecs_field(it, Health, 0);
     Weakness *w = ecs_field(it, Weakness, 1);
+    Click *c = ecs_field(it, Click, 2);
 
     for (int i = 0; i < it->count; i++){
-        h[i].val -= w->val;
+        if (c[i].didClick == true){
+            h[i].val -= w->val;
+        }
     }
 
 }
-
-
-
-
-
 
 // I can't figure out how to use ecs_get cause for example "power" and "Score" are undefined
 void menuScreen(int playerClick, int playerScore, int playerPow, char* name, char* levelName, int levelPower, int enemyHealth, int weakness){
@@ -125,7 +163,6 @@ void inputUser(GameState* state) {
     ECS_COMPONENT(world, Click);  
     ECS_COMPONENT(world, Weakness); 
     
-
     char userInput;
     const Power *power = ecs_get(world, player, Power);
     const Click *click = ecs_get(world, player, Click);
@@ -165,7 +202,8 @@ void inputUser(GameState* state) {
 }
 
 void run(GameState* state) {
-    inputUser(state);
+    ecs_world_t* world = state->world;
+    ecs_progress(world, 0);
 }
 
 int main() {
@@ -208,15 +246,10 @@ int main() {
 
     ecs_add(world, enemy, Health);
     ecs_add(world, enemy, Weakness);
+    ecs_add(world, enemy, Click);
 
     ecs_set(world, player, Score, {0});
     ecs_set(world, player, Health, {100});
-    // power furmula is 2^index + 2
-    Power p = {
-        p.strength = 2,
-        p.name = "Default",
-        p.index = 0,
-    };
     ecs_set(world, player, Power, {
         .index = 0, 
         .names = {"starter", "intermediate"}, 
@@ -224,30 +257,26 @@ int main() {
         .name = "starter", 
         .strength = 2, 
     });
-
     ecs_set(world, player, Click, {0, false});
 
     ecs_set(world, enemy, Health, {50});
     ecs_set(world, enemy, Weakness, {2});
+    ecs_set(world, enemy, Click, {0, false});
 
 
-    ECS_SYSTEM(world, UpdateInput, EcsOnUpdate, Score, Health, Power, Click);
+    ECS_SYSTEM(world, UpdateInput, EcsOnUpdate, world, player, enemy);
     ECS_SYSTEM(world, UpdatePlayerByClick, EcsOnUpdate, Score, Health, Power, Click);
-    ECS_SYSTEM(world, UpdateEnemyHealth, EcsOnUpdate, Health, Weakness);
-
-
-    // need to change this later becuase max is 100, thats conditional, make it dynamic
-    char userInput;
-    int timesOfA = 0;
+    ECS_SYSTEM(world, UpdateEnemyHealth, EcsOnUpdate, Health, Weakness, Click);
+    ECS_SYSTEM(world, ClearIteration, EcsOnUpdate, world, player, enemy);
 
     
-    const Power *power = ecs_get(world, player, Power);
-    const Click *click = ecs_get(world, player, Click);
-    const Score *score = ecs_get(world, player, Score);
-    const Health *health = ecs_get(world, enemy, Health);
-    const Weakness *weakness = ecs_get(world, enemy, Weakness);
-    printf("%s\n", power->names[power->index]);
-    printf("%d\n", power->powers[power->index]);
+    // const Power *power = ecs_get(world, player, Power);
+    // const Click *click = ecs_get(world, player, Click);
+    // const Score *score = ecs_get(world, player, Score);
+    // const Health *health = ecs_get(world, enemy, Health);
+    // const Weakness *weakness = ecs_get(world, enemy, Weakness);
+    // printf("%s\n", power->names[power->index]);
+    // printf("%d\n", power->powers[power->index]);
 
     // put main run function
     run(&state);
