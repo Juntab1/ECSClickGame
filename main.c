@@ -31,7 +31,36 @@ typedef struct Weakness {
 // keep count of singular count 
 typedef struct Click {
     int val;
+    bool didClick;
 }Click;
+
+
+ECS_COMPONENT_DECLARE(Power);
+ECS_COMPONENT_DECLARE(Score);
+ECS_COMPONENT_DECLARE(Click);
+ECS_COMPONENT_DECLARE(Health);
+ECS_COMPONENT_DECLARE(Weakness);
+
+
+typedef struct GameState
+{
+    ecs_world_t* world;
+    ecs_entity_t player;
+    ecs_entity_t enemy;
+} GameState;
+
+
+void UpdateInput(ecs_iter_t* it){
+    Click *c = ecs_field(it, Click, 3);
+
+    
+
+}
+
+// clearing click of user 
+void clear(){
+
+}
 
 // *it is pretty much a linkedlist of entities that have the identified components
 // You do not directly call this function because it is within a System.
@@ -64,9 +93,9 @@ void UpdateEnemyHealth(ecs_iter_t *it) {
 
 }
 
-ecs_world_t *world;
-ecs_entity_t player;
-ecs_entity_t enemy;
+
+
+
 
 
 // I can't figure out how to use ecs_get cause for example "power" and "Score" are undefined
@@ -84,45 +113,59 @@ void menuScreen(int playerClick, int playerScore, int playerPow, char* name, cha
         , playerClick, playerScore, playerPow, name, levelName, levelPower, enemyHealth, weakness);
 }
 
-void run(){
-    // dynamic pointer and must have * for it to be a pointer, having const does not change the pointer itself,
-    // don't need the pointer to ever change 
+void inputUser(GameState* state) {
+    ecs_world_t* world = state->world;
+    ecs_entity_t player = state->player;
+    ecs_entity_t enemy = state->enemy;
+
+    // declaring Component's existence
+    ECS_COMPONENT(world, Score);
+    ECS_COMPONENT(world, Health);
+    ECS_COMPONENT(world, Power);
+    ECS_COMPONENT(world, Click);  
+    ECS_COMPONENT(world, Weakness); 
+    
+
     char userInput;
     const Power *power = ecs_get(world, player, Power);
     const Click *click = ecs_get(world, player, Click);
     const Score *score = ecs_get(world, player, Score);
     const Health *health = ecs_get(world, enemy, Health);
     const Weakness *weakness = ecs_get(world, enemy, Weakness);
-    printf("%s\n", power->names[power->index]);
-    printf("%d\n", power->powers[power->index]);
+
     menuScreen(click->val, score->val, power->strength, power->name, power->names[power->index], power->powers[power->index], health->val, weakness->val);
     printf("\n");
 
     bool runGame = true;
 
-    // delete to move into main function
-    printf("Type \"a\": ");
-    userInput = getche();
-    // scanf("%s", userInput);
-    // while not quit loop and do main update
+    char desiredChar = 'a';
+    char menuChar = 'w';
+    char quitChar = 'q';
 
     while (runGame){
-        printf("\nType \"a\": ");
+        printf("\nType \"%c\": ", desiredChar);
         userInput = getche();
-        if (userInput == 'w'){
+        if (userInput == menuChar){
             menuScreen(click->val, score->val, power->strength, power->name, power->names[power->index], power->powers[power->index], health->val, weakness->val);
         }
-        else if (userInput == 'a'){
+        else if (userInput == desiredChar){
             ecs_progress(world, 0);
         }
         else{
-            runGame = false;
+            userInput = getche();
+            printf("\nType q to quit: ", userInput);
+            if (userInput == quitChar){
+                runGame = false;
+            }
         }
     }
     printf("\n");
 
     menuScreen(click->val, score->val, power->strength, power->name, power->names[power->index], power->powers[power->index], health->val, weakness->val);
+}
 
+void run(GameState* state) {
+    inputUser(state);
 }
 
 int main() {
@@ -140,29 +183,24 @@ int main() {
     // create function later to just initialize the world rather than doing it all in main
 
     // Initialize Flecs world
-    world = ecs_init();
-
+    ecs_world_t* world = ecs_init();
     // giving name parameter to the player
-    player = ecs_entity(world, { .name = "User1" });
-    enemy = ecs_entity(world, { .name = "enemy" });
+    ecs_entity_t player =  ecs_entity(world, { .name = "User1" });
+    ecs_entity_t enemy = ecs_entity(world, { .name = "enemy" });
 
-    // declaring Component
+    GameState state;
+    state.world = world;
+    state.player = player;
+    state.enemy = enemy;
+
+    // declaring Component's existence
     ECS_COMPONENT(world, Score);
     ECS_COMPONENT(world, Health);
     ECS_COMPONENT(world, Power);
     ECS_COMPONENT(world, Click);  
     ECS_COMPONENT(world, Weakness); 
 
-
-    extern ECS_COMPONENT_DECLARE(Power);
-    extern ECS_COMPONENT_DECLARE(Score);
-    extern ECS_COMPONENT_DECLARE(Click);
-    extern ECS_COMPONENT_DECLARE(Health);
-    extern ECS_COMPONENT_DECLARE(Weakness);
-
-
-
-    // Assigning values
+    // Assigning components to entities
     ecs_add(world, player, Score);
     ecs_add(world, player, Health);
     ecs_add(world, player, Power);
@@ -187,11 +225,13 @@ int main() {
         .strength = 2, 
     });
 
-    ecs_set(world, player, Click, {0});
+    ecs_set(world, player, Click, {0, false});
 
     ecs_set(world, enemy, Health, {50});
     ecs_set(world, enemy, Weakness, {2});
 
+
+    ECS_SYSTEM(world, UpdateInput, EcsOnUpdate, Score, Health, Power, Click);
     ECS_SYSTEM(world, UpdatePlayerByClick, EcsOnUpdate, Score, Health, Power, Click);
     ECS_SYSTEM(world, UpdateEnemyHealth, EcsOnUpdate, Health, Weakness);
 
@@ -200,9 +240,18 @@ int main() {
     char userInput;
     int timesOfA = 0;
 
-    // put main run function
-    run();
+    
+    const Power *power = ecs_get(world, player, Power);
+    const Click *click = ecs_get(world, player, Click);
+    const Score *score = ecs_get(world, player, Score);
+    const Health *health = ecs_get(world, enemy, Health);
+    const Weakness *weakness = ecs_get(world, enemy, Weakness);
+    printf("%s\n", power->names[power->index]);
+    printf("%d\n", power->powers[power->index]);
 
+    // put main run function
+    run(&state);
+    printf("test\n");
     // // state which world and what the entity is
     // bool is_alive = ecs_is_alive(world, player);
     // printf("Is alive: %d\n", is_alive);
@@ -214,7 +263,7 @@ int main() {
 
 void menuScreen(int playerClick, int playerScore, int playerPow, char* name, char* levelName, int levelPower, int enemyHealth, int weakness);
 
-void run();
+void run(GameState* state);
 
 
 // Compiling, turns them into object files but not linking them into executable (good when you only change something in one file)
